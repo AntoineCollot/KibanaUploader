@@ -22,23 +22,17 @@ public:
     explicit Widget(QWidget *parent = 0);
     ~Widget();
 
-    void StartProcess();
-
 private slots:
     void on_pushButton_EditPath_clicked();
 
     void on_pushButton_Go_clicked();
 
-    void OnProcessFinished(int exitCode, QProcess::ExitStatus exitStatus);
-
 private:
     Ui::Widget *ui;
 
     QStringList fileList;
-    int currentId;
-    QString output;
-    QProcess* process;
     QSettings* settings;
+    QString path;
 };
 
 #endif // WIDGET_H

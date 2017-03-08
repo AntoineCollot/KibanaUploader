@@ -11,9 +11,7 @@ Widget::Widget(QWidget *parent) :
 
     settings = new QSettings("LonelyYorsh","KibanaUploader",this);
     ui->lineEdit_Endpoint->setText(settings->value("Endpoint","").toString());
-
-    process = new QProcess(this);
-    connect(process,SIGNAL(readyReadStandardOutput()),this,SLOT(OnProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)));
+    path = settings->value("Path","").toString();
 }
 
 Widget::~Widget()
@@ -23,7 +21,7 @@ Widget::~Widget()
 
 void Widget::on_pushButton_EditPath_clicked()
 {
-    fileList = QFileDialog::getOpenFileNames(this,"Select one or more files to upload","/output","JSON (*.json)");
+    fileList = QFileDialog::getOpenFileNames(this,"Select one or more files to upload",path,"JSON (*.json)");
     qDebug()<<fileList;
 
     QString display="";
@@ -35,6 +33,7 @@ void Widget::on_pushButton_EditPath_clicked()
             display+="; ";
         QString file = fileList[i];
         QFileInfo info = QFileInfo(file);
+        path = info.dir().path();
         display+=info.fileName();
     }
 
@@ -44,44 +43,38 @@ void Widget::on_pushButton_EditPath_clicked()
 
 void Widget::on_pushButton_Go_clicked()
 {
-    currentId = 0;
-    output="";
+    QString output="";
 
     settings->setValue("Endpoint",ui->lineEdit_Endpoint->text());
+    settings->setValue("Path",path);
 
-    StartProcess();
-}
-
-void Widget::StartProcess()
-{
-    if(currentId>=fileList.size())
-        return;
-
-    //Execute command like
-    //curl -XPOST 'http://search-movies-4f3nw7eiia2xiynjr55a2nao2y.us-west-1.es.amazonaws.com/_bulk' --data-binary @bulk_movies.json
-    process->start("curl -XPOST '"+ui->lineEdit_Endpoint->text()+"_bulk' --data-binary @"+fileList[currentId]);
-}
-
-void Widget::OnProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
-{
-    output+=fileList[currentId]+" :\n";
-    if(exitCode==-1)
+    for(int i=0;i<fileList.size();i++)
     {
-        output+=process->readAllStandardError();
-        QMessageBox::critical(this,"Output",output);
-    }
-    else
-    {
-        output+=process->readAllStandardOutput();
-        output+="\n\n";
+        QProcess process;
+        //Execute command like
+        //curl -XPOST 'http://search-movies-4f3nw7eiia2xiynjr55a2nao2y.us-west-1.es.amazonaws.com/_bulk' --data-binary @bulk_movies.json
+        process.setProcessChannelMode(QProcess::MergedChannels);
+        QString command = "curl -XPOST '"+ui->lineEdit_Endpoint->text()+"_bulk' --data-binary @"+fileList[i];
+        process.start(command.toStdString().c_str());
 
-        currentId++;
-        if(currentId<fileList.size())
-            StartProcess();
-        else
+        // Wait for it to start
+        if(!process.waitForStarted())
         {
-            output+="\n\nDone !";
-            QMessageBox::information(this,"Output",output);
+            QMessageBox::critical(this,"Error","Command could not be started :\n"+command);
+            return;
         }
+
+        // Continue reading the data until EOF reached
+        QByteArray data;
+
+        while(process.waitForReadyRead())
+            data.append(process.readAll());
+
+        process.waitForFinished();
+
+        output+="\n\n"+fileList[i]+" :\n\n";
+        output +=data;
     }
+
+    ui->textEdit_Output->setPlainText(output);
 }
