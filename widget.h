@@ -8,7 +8,6 @@
 #include <QProcess>
 #include <QMessageBox>
 #include <QSettings>
-#include <QDebug>
 
 namespace Ui {
 class Widget;

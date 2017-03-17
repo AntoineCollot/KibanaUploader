@@ -22,7 +22,6 @@ Widget::~Widget()
 void Widget::on_pushButton_EditPath_clicked()
 {
     fileList = QFileDialog::getOpenFileNames(this,"Select one or more files to upload",path,"JSON (*.json)");
-    qDebug()<<fileList;
 
     QString display="";
 
@@ -54,7 +53,7 @@ void Widget::on_pushButton_Go_clicked()
         //Execute command like
         //curl -XPOST 'http://search-movies-4f3nw7eiia2xiynjr55a2nao2y.us-west-1.es.amazonaws.com/_bulk' --data-binary @bulk_movies.json
         process.setProcessChannelMode(QProcess::MergedChannels);
-        QString command = "curl -XPOST '"+ui->lineEdit_Endpoint->text()+"_bulk' --data-binary @"+fileList[i];
+        QString command = "curl -XPOST \"http://"+ui->lineEdit_Endpoint->text()+"_bulk\" --data-binary @"+fileList[i];
         process.start(command.toStdString().c_str());
 
         // Wait for it to start
